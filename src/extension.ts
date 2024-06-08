@@ -10,19 +10,11 @@ export function activate(context: vscode.ExtensionContext) {
 		(event: vscode.FileCreateEvent) => {
 			event.files.forEach((uri) => {
 				console.log(uri);
-				// eslint-disable-next-line eqeqeq
 				if (uri.scheme == "file") {
-					//do stuff
-					// addSignatureToFile(uri);
 					vscode.workspace.fs.stat(uri).then((stats) => {
 						if (stats.type === vscode.FileType.File) {
 							addSignatureToFile(uri);
-							//add signature if it is file.
 						}
-						/*else if (stats.type === vscode.FileType.Directory) {
-							// It's a directory, you might want to handle this case differently
-							console.log("A directory was created:", uri);
-						}*/
 					});
 				}
 			});
@@ -63,10 +55,6 @@ export function activate(context: vscode.ExtensionContext) {
 		commandConfigurationDisposable,
 		addSignatureDisposable
 	);
-
-	// addSignatureToFile(null);
-
-	// context.subscriptions.push(disposable);
 }
 
 // This method is called when your extension is deactivated
@@ -82,16 +70,13 @@ async function addSignatureToFile(uri: vscode.Uri) {
 		.toLowerCase()
 		.slice(uri.fsPath.lastIndexOf("."));
 	let parsedSignatureText = replacePattern(signatureText);
-	// console.log(parsedSignatureText);
 	const comment = generateComment(fileExtension, parsedSignatureText);
 	if (!comment) {
-		//if file extension is not supported dont add anything
 		return "Add Signature Error: File not supported";
 	}
 	if (!enableAddSignature) {
 		return "Please enable extension from settings: vscode-add-signature";
 	}
-	//adding delay. having issue with new untitle file created and saved
 	await delay(constants.DELAY_500);
 
 	try {
@@ -108,12 +93,11 @@ async function addSignatureToFile(uri: vscode.Uri) {
 			);
 		} else {
 			vscode.window.showErrorMessage(
-				"Unknown error occured adding signature to file"
+				"Unknown error occurred adding signature to file"
 			);
 			console.error(error);
 		}
 	} finally {
-		//no action needed
 		return false;
 	}
 }
@@ -132,15 +116,10 @@ function replacePattern(text: string): string {
 	const hours = now.getHours().toString().padStart(2, "0");
 	const minutes = now.getMinutes().toString().padStart(2, "0");
 
-	// Preserve new line
-	// text = text.replace(/\\n/g, "\n");
-
-	// Replace each component of the date pattern with the corresponding value
-	// Use a regular expression with capturing groups to match any order of date components
 	return text.replace(
 		/\${(DD|MM|YYYY|hh|mm|YEAR)-?(DD|MM|YYYY|hh|mm|YEAR)?-?(DD|MM|YYYY|hh|mm|YEAR)?-?(DD|MM|YYYY|hh|mm|YEAR)?-?(DD|MM|YYYY|hh|mm|YEAR)?}/g,
 		(match, p1, p2, p3, p4, p5) => {
-			const components = [p1, p2, p3, p4, p5].filter(Boolean); // Remove undefined components
+			const components = [p1, p2, p3, p4, p5].filter(Boolean);
 			const orderedValues = components.map((component) => {
 				switch (component) {
 					case "DD":
@@ -156,10 +135,10 @@ function replacePattern(text: string): string {
 					case "YEAR":
 						return year;
 					default:
-						return component; // Leave unknown components unchanged
+						return component;
 				}
 			});
-			return orderedValues.join("-"); // Join the ordered values with '-'
+			return orderedValues.join("-");
 		}
 	);
 }
@@ -167,8 +146,6 @@ function replacePattern(text: string): string {
 function generateComment(fileExtension: string, parsedSignatureText: string) {
 	console.log({ fileExtension, parsedSignatureText });
 
-	// Define a mapping of file extensions to their respective comment block formats
-	//supported files.
 	const commentFormats: { [key: string]: string } = {
 		".js": "/**\n",
 		".ts": "/**\n",
@@ -181,34 +158,48 @@ function generateComment(fileExtension: string, parsedSignatureText: string) {
 		".kts": "/*\n",
 		".php": "/*\n",
 		".c": "/*\n",
+		".cpp": "/*\n",
+		".cs": "/*\n",
+		".lua": "--[[\n",
 		".py": '"""\n',
-		// Add more file extensions and their corresponding comment block formats as needed
+		".swift": "/*\n",
+		".pl": "#\n",
+		".hs": "{-\n",
+		".rb": "=begin\n",
+		".rs": "/*\n",
+		".java": "/*\n",
+		".kt": "/*\n",
+		".kts": "/*\n",
+		".php": "/*\n",
+		".c": "/*\n",
+		".cpp": "/*\n",
+		".cs": "/*\n",
+		".lua": "--[[\n",
+		".py": '"""\n',
+		".swift": "/*\n",
+		".pl": "#\n",
+		".hs": "{-\n"
 	};
 
-	// Get the comment block format for the given file extension
 	const commentFormat = commentFormats[fileExtension.toLowerCase()];
 
 	if (!commentFormat) {
 		return;
 	}
 
-	// Split the parsed signature text into an array of lines
 	let commentLines = parsedSignatureText.split("\n");
 
-	// Remove the first empty string if present
 	if (commentLines[0] === "") {
 		commentLines.shift();
 	}
 
 	let commentBlock = "";
 
-	// Generate the comment block using the comment format and parsed signature text
 	commentBlock = `${commentFormat}`;
 	commentLines.forEach((line) => {
 		commentBlock += ` ${line}\n`;
 	});
 
-	//Comment closing
 	commentBlock += `${
 		commentFormat.startsWith('"""')
 			? '"""'
@@ -216,6 +207,12 @@ function generateComment(fileExtension: string, parsedSignatureText: string) {
 			? "-->"
 			: commentFormat.startsWith("=begin")
 			? "=end"
+			: commentFormat.startsWith("--[[")
+			? "--]]"
+			: commentFormat.startsWith("{-")
+			? "-}"
+			: commentFormat.startsWith("#")
+			? "#"
 			: "*/"
 	}\n\n`;
 
